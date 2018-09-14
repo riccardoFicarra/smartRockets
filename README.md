@@ -3,4 +3,4 @@ Smart rockets based on js and p5.js inspired by Daniel Schiffman (The Coding Tra
 This is my first non-hello-world project on github so have mercy.
 trying to commit stuff
 master modification
-another master modf
+master mod and second branch mod
