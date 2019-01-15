@@ -1,7 +1,8 @@
 var population;
-var lifespan = 300;
+var lifespan = 1000;
 var count = 0;
 var target;
+var alive = true;
 function setup(){
     createCanvas(800,600);
     population = new Population();
@@ -9,14 +10,15 @@ function setup(){
 }
 function draw(){
     background(0);
-    population.update();
+    alive = population.update();
     population.show();
 
-    if(count === lifespan){
+    if(count === lifespan || !alive){
         count = 0;
         //population = new Population();
         population.evaluate();
         population.selection();
+        alive = true;
     }
     ellipse(target.pos.x, target.pos.y, target.r,target.r);
     count++;
@@ -40,27 +42,30 @@ function Population(){
         }
     };
     this.update = function(){
+        var alive = false;
             for(var i = 0; i<this.popsize;i++){
-                this.rockets[i].update();
+                if(this.rockets[i].hitTarget === -1 && !this.rockets[i].hitWall)
+                alive |= this.rockets[i].update();
             }
+            return alive;
     };
     this.evaluate = function(){
         var maxFit = 0;
-        for(var i = 0; i<this.popsize; i++){
+        for(i = 0; i<this.popsize; i++){
             this.rockets[i].calcFitness();
             if(this.rockets[i].fitness > maxFit){
                 maxFit = this.rockets[i].fitness;
             }
         }
         console.log(maxFit);
-        for(var i = 0; i<this.popsize;i++){    //normalize fitness
+        for(i = 0; i<this.popsize;i++){    //normalize fitness
             this.rockets[i].fitness/=maxFit;
         }
 
         this.matingPool = [];
-        for(var i = 0; i<this.popsize; i++){
+        for(i = 0; i<this.popsize; i++){
             var n = this.rockets[i].fitness*100;
-            for(j = 0; j<n; j++){
+            for(var j = 0; j<n; j++){
                 this.matingPool.push(this.rockets[i]);
             }
         }
@@ -121,6 +126,8 @@ function Rocket(childDna){
     this.acc = createVector(0);
     this.color = [255,0,0];
     this.fitness = 0;
+    this.hitWall = false;
+    this.hitTarget = -1;                //frame in which the rocket hit the target, -1 if never hits.
     if(childDna){
         this.dna = childDna;
     } else {
@@ -137,15 +144,18 @@ function Rocket(childDna){
     this.update = function(){
 
         if(this.hit(target)) {
-            this.fitness += 150-(lifespan-count)/lifespan*100;
+            this.hitTarget = count;
+            return false;
         } else if(this.outOfWindow()){
-            this.fitness -=20;
+            this.hitWall = true;
+            return false;
         } else {
             this.applyForce(this.dna.genes[count]);
 
             this.vel.add(this.acc);
             this.pos.add(this.vel);
             this.acc.mult(0);
+            return true;
         }
     };
     this.show = function(){
@@ -160,7 +170,11 @@ function Rocket(childDna){
     };
     this.calcFitness = function(){
         var d = dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
-        this.fitness += map(d, 0, width, 100, 0);
+        this.fitness = map(d, 0, width, 100, 0);
+        if(this.hitTarget !== -1)
+            this.fitness += 1000-(lifespan-this.hitTarget)/lifespan*500;
+        else if (this.hitWall)
+            this.fitness -= 20;
         //this.fitness = 1/d;
     };
     this.hit = function(target){
