@@ -1,6 +1,7 @@
 var population;
 var lifespan = 1000;
 var count = 0;
+var popsize = 50;
 var target;
 var alive = true;
 function setup(){
@@ -23,13 +24,20 @@ function draw(){
     ellipse(target.pos.x, target.pos.y, target.r,target.r);
     count++;
 }
+function Item(x,y){
+    this.pos = createVector(x,y);
+
+    this.hit = function(){
+
+    }
+}
 function Target(){
     this.r = 32;
-    this.pos = createVector(width/2, 50);
+    this.pos = createVector(width/2, height/3);
 }
 function Population(){
     this.rockets = [];
-    this.popsize = 100;
+    this.popsize = popsize;
     this.matingPool = [];
 
     for(var i = 0; i<this.popsize;i++){
@@ -62,8 +70,15 @@ function Population(){
             this.rockets[i].fitness/=maxFit;
         }
 
+    };
+    this.selection = function(){
+        var newRockets = [];
         this.matingPool = [];
         for(i = 0; i<this.popsize; i++){
+            //keep 10 copies of best rocket
+            if(this.rockets[i].fitness === 1){
+                newRockets[0] = new Rocket(this.rockets[i].dna);
+            }
             var n = this.rockets[i].fitness*100;
             for(var j = 0; j<n; j++){
                 this.matingPool.push(this.rockets[i]);
@@ -71,10 +86,7 @@ function Population(){
         }
 
 
-    };
-    this.selection = function(){
-        var newRockets = [];
-        for(var i = 0; i<this.rockets.length; i++){
+        for(var i = 1; i<this.rockets.length; i++){
             var iA = floor(random(0, this.matingPool.length));
             var iB = floor(random(0, this.matingPool.length));
             var parentA = this.matingPool[iA].dna;
@@ -110,8 +122,19 @@ function DNA(genes){
         }
         return new DNA(newgenes);
     };
+    this.crossover2 = function(parentB){
+        var newgenes = [];
+        for(var i = 0; i<this.genes.length; i++){
+            if(random(1) < 0.5){
+                newgenes[i] = this.genes[i];
+            } else {
+                newgenes[i] = parentB.genes[i];
+            }
+        }
+        return new DNA(newgenes);
+    };
     this.mutation = function(){
-        var mutationRate = 0.05;
+        var mutationRate = 0.001;
         for(var i = 0; i<this.genes.length; i++){
             if(random(1)< mutationRate){
                 this.genes[i] = p5.Vector.random2D();
@@ -174,7 +197,7 @@ function Rocket(childDna){
         if(this.hitTarget !== -1)
             this.fitness += 1000-(lifespan-this.hitTarget)/lifespan*500;
         else if (this.hitWall)
-            this.fitness -= 20;
+            this.fitness -= 100;
         //this.fitness = 1/d;
     };
     this.hit = function(target){
