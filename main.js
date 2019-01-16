@@ -7,7 +7,7 @@ var alive = true;
 var walls = [];
 var generations = 0;
 var mutationRate = 0.0001;
-
+var elite = popsize/10;
 
 function setup(){
     collideDebug(true);
@@ -116,7 +116,19 @@ function Population(){
 
     this.selection = function(){
         var newRockets = [];
-        for(var i = 0; i<this.rockets.length; i++){
+
+        this.findTopKRockets = function(k) {
+            this.rockets.sort(function(a,b){return b.fitness - a.fitness});
+            var topK = [];
+            for(var i  =0 ; i<k; i++)
+                topK[i] = this.rockets[i];
+            return topK;
+        };
+
+        var topKRockets = this.findTopKRockets(elite);
+        for(var i = 0; i<elite; i++)
+            newRockets[i] = new Rocket(topKRockets[i].dna, topKRockets[i].color);
+        for(i = elite; i<this.rockets.length; i++){
             var parentA = this.acceptReject();
             var parentB = this.acceptReject(parentA);
             var childDNA = parentA.dna.crossover(parentB.dna);
