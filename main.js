@@ -1,18 +1,21 @@
 var population;
-var lifespan = 1000;
+var lifespan = 350;
 var count = 0;
-var popsize = 101;
+var popsize = 100;
 var target;
 var alive = true;
 var walls = [];
 var generations = 0;
+var mutationRate = 0.0001;
+
+
 function setup(){
     collideDebug(true);
     createCanvas(800,600);
     population = new Population();
     target = new Target(width/2, 50, 32);
-    walls[0] = new Wall(width/2+200, 0.3*height, 500, 5);
-    walls[1] = new Wall(width/2-200, 0.6*height, 500, 5);
+    //walls[0] = new Wall(width/2+200, 0.3*height, 500, 5);
+    //walls[1] = new Wall(width/2-200, 0.6*height, 500, 5);
     angleMode(RADIANS);
 }
 function draw(){
@@ -99,27 +102,25 @@ function Population(){
         }
 
     };
+
+    //if defined, parent skipChoice is never chosen (avoids having rockets with the same rocket as both parents)
+     this.acceptReject = function(skipChoice) {
+        var safety = 0;
+        while(safety < 1000){
+            var choice = floor(random(this.rockets.length));
+            if(this.rockets[choice].fitness < random(1) || (skipChoice && choice !== skipChoice))
+                return this.rockets[choice];
+            safety++;
+        }
+    };
+
     this.selection = function(){
         var newRockets = [];
-        this.matingPool = [];
-
-        for(i = 0; i<this.popsize; i++){
-            var n = this.rockets[i].fitness*100;
-            for(var j = 0; j<n; j++){
-                this.matingPool.push(this.rockets[i]);
-            }
-        }
-        for(var i = 0; i<floor(this.rockets.length/10); i++){
-            newRockets[i] = new Rocket();
-        }
-
-        for(var i = floor(this.rockets.length/10); i<this.rockets.length; i++){
-            var iA = floor(random(0, this.matingPool.length));
-            var iB = floor(random(0, this.matingPool.length));
-            var parentA = this.matingPool[iA];
-            var parentB = this.matingPool[iB];
-            var childDNA = parentA.dna.crossover2(parentB.dna);
-            childDNA.mutation();
+        for(var i = 0; i<this.rockets.length; i++){
+            var parentA = this.acceptReject();
+            var parentB = this.acceptReject(parentA);
+            var childDNA = parentA.dna.crossover(parentB.dna);
+            childDNA.mutation(mutationRate);
             var childColor;
             if(parentA.fitness > parentB.fitness)
                 childColor = parentA.color;
@@ -165,15 +166,14 @@ function DNA(genes){
         }
         return new DNA(newgenes);
     };
-    this.mutation = function(){
-        var mutationRate = 0.001;
+    this.mutation = function(mutationRate){
         for(var i = 0; i<this.genes.length; i++){
             if(random(1)< mutationRate){
                 this.genes[i] = p5.Vector.random2D();
                 this.genes[i].setMag(0.1);
             }
         }
-        }
+    }
 }
 function Rocket(childDna, color){
     this.pos = createVector(width/2, height*0.8);
@@ -235,13 +235,14 @@ function Rocket(childDna, color){
         rect(0, 0, this.width,this.height);
         pop();
     };
+
     this.calcFitness = function(){
         var d = dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
-        this.fitness = map(d, 0, width, 100, 0);
+        this.fitness = map(d, 0, sqrt(height*height+width*width), 100, 0);
         if(this.hitTarget !== -1)
-            this.fitness *= 2+(lifespan-this.hitTarget)/lifespan;
+            this.fitness *= 5*(1+(lifespan-this.hitTarget)/lifespan);
         else if (this.hitWall)
-            this.fitness/=2;
+            this.fitness/=1.5;
         //this.fitness = 1/d;
     };
 
