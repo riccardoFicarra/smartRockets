@@ -1,7 +1,7 @@
 var population;
 var lifespan = 1000;
 var count = 0;
-var popsize = 100;
+var popsize = 101;
 var target;
 var alive = true;
 var walls = [];
@@ -116,11 +116,16 @@ function Population(){
         for(var i = floor(this.rockets.length/10); i<this.rockets.length; i++){
             var iA = floor(random(0, this.matingPool.length));
             var iB = floor(random(0, this.matingPool.length));
-            var parentA = this.matingPool[iA].dna;
-            var parentB = this.matingPool[iB].dna;
-            var child = parentA.crossover2(parentB);
-            child.mutation();
-            newRockets[i] = new Rocket(child);
+            var parentA = this.matingPool[iA];
+            var parentB = this.matingPool[iB];
+            var childDNA = parentA.dna.crossover2(parentB.dna);
+            childDNA.mutation();
+            var childColor;
+            if(parentA.fitness > parentB.fitness)
+                childColor = parentA.color;
+            else
+                childColor = parentB.color;
+            newRockets[i] = new Rocket(childDNA, childColor);
         }
         this.rockets = newRockets;
     }
@@ -161,7 +166,7 @@ function DNA(genes){
         return new DNA(newgenes);
     };
     this.mutation = function(){
-        var mutationRate = 0.01;
+        var mutationRate = 0.001;
         for(var i = 0; i<this.genes.length; i++){
             if(random(1)< mutationRate){
                 this.genes[i] = p5.Vector.random2D();
@@ -170,13 +175,12 @@ function DNA(genes){
         }
         }
 }
-function Rocket(childDna){
+function Rocket(childDna, color){
     this.pos = createVector(width/2, height*0.8);
     this.height = 5;
     this.width = 25;
     this.vel = createVector();
     this.acc = createVector(0);
-    this.color = [255,0,0];
     this.fitness = 0;
     this.hitWall = false;
     this.hitTarget = -1;                //frame in which the rocket hit the target, -1 if never hits.
@@ -185,6 +189,10 @@ function Rocket(childDna){
     } else {
         this.dna = new DNA();
     }
+    if(color){
+        this.color = color;
+    } else
+        this.color = [floor(random(256)), floor(random(256)), floor(random(256))]
 
 
     this.applyForce = function(force){
@@ -223,7 +231,7 @@ function Rocket(childDna){
         noStroke();
         rotate(this.vel.heading());
         rectMode(CENTER);
-        fill(this.color[0], this.color[1], this.color[2], 50);
+        fill(this.color[0], this.color[1], this.color[2], 70);
         rect(0, 0, this.width,this.height);
         pop();
     };
@@ -231,7 +239,7 @@ function Rocket(childDna){
         var d = dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
         this.fitness = map(d, 0, width, 100, 0);
         if(this.hitTarget !== -1)
-            this.fitness *= 1+(lifespan-this.hitTarget)/lifespan;
+            this.fitness *= 2+(lifespan-this.hitTarget)/lifespan;
         else if (this.hitWall)
             this.fitness/=2;
         //this.fitness = 1/d;
