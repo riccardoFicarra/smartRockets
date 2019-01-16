@@ -1,47 +1,67 @@
 var population;
-var lifespan = 300;
+var lifespan = 1000;
 var count = 0;
-var popsize = 50;
+var popsize = 100;
 var target;
 var alive = true;
+var walls = [];
+var generations = 0;
 function setup(){
     collideDebug(true);
     createCanvas(800,600);
     population = new Population();
-    target = new Target();
+    target = new Target(width/2, 50, 32);
+    walls[0] = new Wall(width/2+200, 0.3*height, 500, 5);
+    walls[1] = new Wall(width/2-200, 0.6*height, 500, 5);
     angleMode(RADIANS);
 }
 function draw(){
     background(0);
     alive = population.update();
     population.show();
-
+    target.show();
+    for(var i = 0; i<walls.length; i++)
+        walls[i].show();
+    count++;
     if(count === lifespan || !alive){
         count = 0;
-        //population = new Population();
         population.evaluate();
         population.selection();
-        alive = true;
+        generations++;
     }
-    target.show();
-    count++;
+
 }
-function Item(x,y){
+function Wall(x,y, w, h, angle){
     this.pos = createVector(x,y);
+    this.width = w;
+    this.height = h;
+    this.show = function(){
+        push();
+        rectMode(CENTER);
+        fill(255,255,255);
+        if(angle !== undefined)
+            rotate(angle);
+        rect(this.pos.x, this.pos.y, this.width, this.height);
+        pop();
+    };
+    this.hit = function(rocket){
+        var vertexes = rocket.getVertexes();
+        return collideRectPoly(this.pos.x-this.width/2, this.pos.y-this.height/2, this.width, this.height, vertexes);
+    };
 
-    this.hit = function(){
-
-    }
 }
-function Target(){
-    this.r = 32;
-    this.pos = createVector(width/2, height/3);
+function Target(x, y, r){
+    this.r = r;
+    this.pos = createVector(x, y);
 
     this.show = function(){
         fill(255,255,255);
         ellipse(target.pos.x, target.pos.y, target.r,target.r);
     };
-
+    this.hit = function(rocket){
+        var vertexes = rocket.getVertexes();
+        return collideCirclePoly(this.pos.x, this.pos.y, this.r, vertexes);
+    };
 }
 function Population(){
     this.rockets = [];
@@ -82,19 +102,18 @@ function Population(){
     this.selection = function(){
         var newRockets = [];
         this.matingPool = [];
+
         for(i = 0; i<this.popsize; i++){
-            //keep 10 copies of best rocket
-            if(this.rockets[i].fitness === 1){
-                newRockets[0] = new Rocket(this.rockets[i].dna);
-            }
             var n = this.rockets[i].fitness*100;
             for(var j = 0; j<n; j++){
                 this.matingPool.push(this.rockets[i]);
             }
         }
+        for(var i = 0; i<floor(this.rockets.length/10); i++){
+            newRockets[i] = new Rocket();
+        }
 
-
-        for(var i = 1; i<this.rockets.length; i++){
+        for(var i = floor(this.rockets.length/10); i<this.rockets.length; i++){
             var iA = floor(random(0, this.matingPool.length));
             var iB = floor(random(0, this.matingPool.length));
             var parentA = this.matingPool[iA].dna;
@@ -142,7 +161,7 @@ function DNA(genes){
         return new DNA(newgenes);
     };
     this.mutation = function(){
-        var mutationRate = 0.0001;
+        var mutationRate = 0.01;
         for(var i = 0; i<this.genes.length; i++){
             if(random(1)< mutationRate){
                 this.genes[i] = p5.Vector.random2D();
@@ -174,17 +193,24 @@ function Rocket(childDna){
     this.outOfWindow = function () {
         return this.pos.x < 0 || this.pos.x > width || this.pos.y < 0 || this.pos.y > height;
     };
+    this.hitWalls = function () {
+        //checks the rocket against all walls
+        for(var i = 0; i<walls.length; i++){
+            if(walls[i].hit(this))
+                return true;
+        }
+        return false;
+    };
     this.update = function(){
 
-        if(this.hit(target)) {
+        if(target.hit(this)) {
             this.hitTarget = count;
             return false;
-        } else if(this.outOfWindow()){
+        } else if(this.outOfWindow() || this.hitWalls()){
             this.hitWall = true;
             return false;
         } else {
             this.applyForce(this.dna.genes[count]);
-
             this.vel.add(this.acc);
             this.pos.add(this.vel);
             this.acc.mult(0);
@@ -205,15 +231,12 @@ function Rocket(childDna){
         var d = dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y);
         this.fitness = map(d, 0, width, 100, 0);
         if(this.hitTarget !== -1)
-            this.fitness += 1000-(lifespan-this.hitTarget)/lifespan*500;
+            this.fitness *= 1+(lifespan-this.hitTarget)/lifespan;
         else if (this.hitWall)
-            this.fitness -= 100;
+            this.fitness/=2;
         //this.fitness = 1/d;
     };
-    this.hit = function(target){
-        var rocket = this.getVertexes();
-        return collideCirclePoly(target.pos.x, target.pos.y, target.r, rocket);
-    };
+
     this.getVertexes = function(){
         var vertexes = [];
         //initialize vertexes as if they were around 0.0 for rotation
@@ -230,12 +253,7 @@ function Rocket(childDna){
             vertexes[v] = createVector(this.pos.x+vertexes[v].x*c - vertexes[v].y*s,this.pos.y + vertexes[v].x*s + vertexes[v].y*c);
         }
         fill(255, 255,255, 50);
-        /*beginShape();
-        for(i=0; i < vertexes.length; i++){
-            vertex(vertexes[i].x,vertexes[i].y);
-        }
-        endShape(CLOSE);
-        */
+
         return vertexes;
     }
 }
