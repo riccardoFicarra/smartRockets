@@ -1,13 +1,15 @@
 var population;
-var lifespan = 1000;
+var lifespan = 300;
 var count = 0;
 var popsize = 50;
 var target;
 var alive = true;
 function setup(){
+    collideDebug(true);
     createCanvas(800,600);
     population = new Population();
     target = new Target();
+    angleMode(RADIANS);
 }
 function draw(){
     background(0);
@@ -21,7 +23,7 @@ function draw(){
         population.selection();
         alive = true;
     }
-    ellipse(target.pos.x, target.pos.y, target.r,target.r);
+    target.show();
     count++;
 }
 function Item(x,y){
@@ -34,6 +36,12 @@ function Item(x,y){
 function Target(){
     this.r = 32;
     this.pos = createVector(width/2, height/3);
+
+    this.show = function(){
+        fill(255,255,255);
+        ellipse(target.pos.x, target.pos.y, target.r,target.r);
+    };
+
 }
 function Population(){
     this.rockets = [];
@@ -91,7 +99,7 @@ function Population(){
             var iB = floor(random(0, this.matingPool.length));
             var parentA = this.matingPool[iA].dna;
             var parentB = this.matingPool[iB].dna;
-            var child = parentA.crossover(parentB);
+            var child = parentA.crossover2(parentB);
             child.mutation();
             newRockets[i] = new Rocket(child);
         }
@@ -134,7 +142,7 @@ function DNA(genes){
         return new DNA(newgenes);
     };
     this.mutation = function(){
-        var mutationRate = 0.001;
+        var mutationRate = 0.0001;
         for(var i = 0; i<this.genes.length; i++){
             if(random(1)< mutationRate){
                 this.genes[i] = p5.Vector.random2D();
@@ -145,6 +153,8 @@ function DNA(genes){
 }
 function Rocket(childDna){
     this.pos = createVector(width/2, height*0.8);
+    this.height = 5;
+    this.width = 25;
     this.vel = createVector();
     this.acc = createVector(0);
     this.color = [255,0,0];
@@ -187,8 +197,8 @@ function Rocket(childDna){
         noStroke();
         rotate(this.vel.heading());
         rectMode(CENTER);
-        fill(this.color[0], this.color[1], this.color[2]);
-        rect(0, 0, 25,5);
+        fill(this.color[0], this.color[1], this.color[2], 50);
+        rect(0, 0, this.width,this.height);
         pop();
     };
     this.calcFitness = function(){
@@ -201,6 +211,31 @@ function Rocket(childDna){
         //this.fitness = 1/d;
     };
     this.hit = function(target){
-        return dist(this.pos.x, this.pos.y, target.pos.x, target.pos.y) < target.r;
+        var rocket = this.getVertexes();
+        return collideCirclePoly(target.pos.x, target.pos.y, target.r, rocket);
+    };
+    this.getVertexes = function(){
+        var vertexes = [];
+        //initialize vertexes as if they were around 0.0 for rotation
+        vertexes[0] = createVector(-1* this.width/2,-1* this.height/2);
+        vertexes[1] = createVector(this.width/2,-1*this.height/2);
+        vertexes[2] = createVector(this.width/2, this.height/2);
+        vertexes[3] = createVector(-1* this.width/2,this.height/2);
+
+        var angle = atan2(this.vel.y, this.vel.x);
+        var s = sin(angle);
+        var c = cos(angle);
+        for(var v = 0; v<vertexes.length; v++){
+            //compute rotated vertexes, move them into position.
+            vertexes[v] = createVector(this.pos.x+vertexes[v].x*c - vertexes[v].y*s,this.pos.y + vertexes[v].x*s + vertexes[v].y*c);
+        }
+        fill(255, 255,255, 50);
+        /*beginShape();
+        for(i=0; i < vertexes.length; i++){
+            vertex(vertexes[i].x,vertexes[i].y);
+        }
+        endShape(CLOSE);
+        */
+        return vertexes;
     }
 }
