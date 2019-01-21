@@ -1,15 +1,23 @@
-var population;
+//play as much as you want with the following variables
+var populationSize = 100;
+//number of top k rockets that survive to next generation without changing
+var elite = populationSize/10;
 var lifespan = 500;
+var speed = 0.3;
+//number of squares in which the screen is divided
 var granularity = 100;
-var count = 0;
-var popsize = 100;
+//chance that a certain gene is changed to a random one
+var mutationRate = 0.03;
+//increase bias towards replicating best rockets
+var poli_increase = 5;
+
+//dont touch these others
 var target;
 var alive = true;
 var walls = [];
+var population;
+var count = 0;
 var generations = 0;
-var mutationRate = 0.03;
-var elite = popsize/10;
-var speed = 0.3;
 var maxFit = 0;
 var oldMaxFit = 1;
 var totFit = 0;
@@ -18,10 +26,14 @@ function setup(){
     collideDebug(true);
     createCanvas(800,800);
     population = new Population();
-    target = new Target(width/2, 50, 32);
-    walls[0] = new Wall(width/2+200, 0.3*height, 500, 5);
+    target = new Target(width/2, 100, 32);
+    walls.push(new Wall(width/2, 200, 100, 5));
+    walls.push(new Wall(width/2-50, height/2+20, 5, 450));
+    walls.push(new Wall(width/2+50, height/2+20, 5, 450));
+    //walls[1] = new Wall(width-300, height/3, 600, 5);
+
     //walls[2] = new Wall(width/2-150, 0.3*height, 150, 5);
-    walls[1] = new Wall(width/2-200, 0.6*height, 500, 5);
+    //walls[3] = new Wall(width/2-100, 0.6*height, 500, 5);
     angleMode(RADIANS);
 }
 function draw(){
@@ -74,7 +86,7 @@ function Target(x, y, r){
 }
 function Population(){
     this.rockets = [];
-    this.popsize = popsize;
+    this.popsize = populationSize;
 
     for(var i = 0; i<this.popsize;i++){
         this.rockets[i] = new Rocket();
@@ -105,11 +117,11 @@ function Population(){
         }
         var maxIncrease = (maxFit-oldMaxFit)/oldMaxFit*100;
         oldMaxFit = maxFit;
-        var avgIncrease = (totFit/popsize-avgFit)/avgFit*100;
-        avgFit = totFit/popsize;
+        var avgIncrease = (totFit/populationSize-avgFit)/avgFit*100;
+        avgFit = totFit/populationSize;
         console.log("maxFit ="+maxFit);
         console.log("max fitness increase: "+maxIncrease+"%");
-        console.log("avg fitness = "+totFit/popsize);
+        console.log("avg fitness = "+totFit/populationSize);
         console.log("avg fitness increase: "+avgIncrease+"%");
     };
 
@@ -147,7 +159,7 @@ function Population(){
                 newRockets[i] = new Rocket(topKRockets[i].dna, topKRockets[i].color);
         }
         var countChild = [];
-        for(i = 0; i<popsize; i++)
+        for(i = 0; i<populationSize; i++)
             countChild[i] = 0;
         for(i = elite; i<this.rockets.length; i++){
             var parentA = this.acceptReject(undefined, countChild);
@@ -288,7 +300,7 @@ function Rocket(childDna, color){
           //  this.fitness/=2;
         //this.fitness = 1/d;
         //this.fitness = pow(2, this.fitness);
-        this.fitness = pow(this.fitness,5);
+        this.fitness = pow(this.fitness,poli_increase);
     };
 
     this.getVertexes = function(){
