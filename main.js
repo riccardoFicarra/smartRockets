@@ -11,7 +11,9 @@ var mutationRate = 0.03;
 var elite = popsize/10;
 var speed = 0.3;
 var maxFit = 0;
+var oldMaxFit = 1;
 var totFit = 0;
+var avgFit = 1;
 function setup(){
     collideDebug(true);
     createCanvas(800,800);
@@ -101,8 +103,14 @@ function Population(){
                 maxFit = this.rockets[i].fitness;
             }
         }
+        var maxIncrease = (maxFit-oldMaxFit)/oldMaxFit*100;
+        oldMaxFit = maxFit;
+        var avgIncrease = (totFit/popsize-avgFit)/avgFit*100;
+        avgFit = totFit/popsize;
         console.log("maxFit ="+maxFit);
+        console.log("max fitness increase: "+maxIncrease+"%");
         console.log("avg fitness = "+totFit/popsize);
+        console.log("avg fitness increase: "+avgIncrease+"%");
     };
 
     //if defined, parent skipChoice is never chosen (avoids having rockets with the same rocket as both parents)
